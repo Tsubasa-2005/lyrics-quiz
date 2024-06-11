@@ -1,68 +1,67 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
-	dbModel "lyrics-quiz/db"
+	"io/ioutil"
+	"log"
+	"os"
 
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/cobra"
 )
 
+// ConnectDB SQLiteデータベースに接続または新規作成する関数
+func ConnectDB(ctx context.Context) *sql.DB {
+	// データベースファイルを作成または接続
+	db, err := sql.Open("sqlite3", "data.sqlite3")
+	if err != nil {
+		log.Fatalf("failed to connect database: %v", err)
+	}
+
+	// Ping the database to verify connection
+	if err := db.PingContext(ctx); err != nil {
+		log.Fatalf("failed to ping database: %v", err)
+	}
+
+	return db
+}
+
+// ExecuteSQLFile SQLファイルを実行する関数
+func ExecuteSQLFile(db *sql.DB, filePath string) {
+	content, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		log.Fatalf("failed to read SQL file: %v", err)
+	}
+
+	sqlStmt := string(content)
+	_, err = db.Exec(sqlStmt)
+	if err != nil {
+		log.Fatalf("failed to execute SQL file: %v", err)
+	}
+}
+
+// migrateCmd データベースのテーブルを作成するcobraコマンド
 func migrateCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "migrate and initialize",
-		Short: "Migrate the database and initialize database",
+		Use:   "migrate",
+		Short: "Migrate the database",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			db, err := gorm.Open("sqlite3", "data.sqlite3")
-			if err != nil {
-				return fmt.Errorf("failed to open database: %v", err)
-			}
-			defer func(db *gorm.DB) {
-				err := db.Close()
-				if err != nil {
+			// 環境変数の設定
+			os.Setenv("DB_PATH", "./example.db")
 
-				}
-			}(db)
+			// データベースに接続または新規作成
+			ctx := context.Background()
+			db := ConnectDB(ctx)
+			defer db.Close()
 
-			// Migrate the schema
-			if err := db.AutoMigrate(&dbModel.QuizCounter{}).Error; err != nil {
-				return fmt.Errorf("failed to migrate QuizCounter model: %v", err)
-			}
-			if err := db.AutoMigrate(&dbModel.LyricsCounter{}).Error; err != nil {
-				return fmt.Errorf("failed to migrate LyricsCounter model: %v", err)
-			}
-			if err := db.AutoMigrate(&dbModel.Lyrics{}).Error; err != nil {
-				return fmt.Errorf("failed to migrate Lyrics model: %v", err)
-			}
-			if err := db.AutoMigrate(&dbModel.Answer{}).Error; err != nil {
-				return fmt.Errorf("failed to migrate Answer model: %v", err)
-			}
+			// SQLファイルを実行してテーブルを作成
+			ExecuteSQLFile(db, "db/core.sql")
 
-			err = initializeDataBase(db)
-
-			return err
+			fmt.Println("Database connected and tables created successfully!")
+			return nil
 		},
 	}
 	return cmd
-}
-
-func initializeDataBase(db *gorm.DB) error {
-	quizCount := dbModel.QuizCounter{
-		QuizCounterID: 1, Count: 1,
-	}
-	var err error
-
-	if err = db.Create(&quizCount).Error; err != nil {
-		return fmt.Errorf("failed to initialize quizCounter model: %v", err)
-	}
-
-	lyricsCount := dbModel.LyricsCounter{
-		LyricsCounterID: 1, Count: 1,
-	}
-
-	if err = db.Create(&lyricsCount).Error; err != nil {
-		return fmt.Errorf("failed to initialize lyricsCounter model: %v", err)
-	}
-	return nil
 }

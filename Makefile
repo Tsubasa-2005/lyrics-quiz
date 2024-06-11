@@ -4,4 +4,4 @@ local-server:
 
 .PHONE: migrate and initialize
 migrate:
-	go run ./cmd migrate and initialize
+	go run ./cmd migrate
