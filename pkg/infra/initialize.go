@@ -16,8 +16,8 @@ func Initialize(c *gin.Context, userID string, bot *linebot.Client, event *lineb
 
 	err := repo.UpdateQuizManager(c, rdb.UpdateQuizManagerParams{
 		TheNumberOfQuestions: 0,
-		QuizCount:            0,
-		LyricsCount:          0,
+		QuizCount:            1,
+		LyricsCount:          1,
 		Status:               "not_started",
 		Type:                 "",
 		UserID:               userID,
@@ -39,8 +39,16 @@ func Initialize(c *gin.Context, userID string, bot *linebot.Client, event *lineb
 			c.Error(errors.Wrap(err))
 		}
 	}
-	err = repo.UpdateArtist(c, rdb.UpdateArtistParams{
-		QuizManagerID: userID,
-		Artist:        "",
-	})
+	err = repo.DeleteArtist(c, userID)
+	if err != nil {
+		if _, err = bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(reply)).Do(); err != nil {
+			c.Error(errors.Wrap(err))
+		}
+	}
+	err = repo.DeleteChoices(c, userID)
+	if err != nil {
+		if _, err = bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(reply)).Do(); err != nil {
+			c.Error(errors.Wrap(err))
+		}
+	}
 }

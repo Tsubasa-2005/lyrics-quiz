@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"lyrics-quiz/pkg/infra/rdb"
 	"lyrics-quiz/pkg/message"
+	"math/rand"
 	"os"
 	"strings"
 
@@ -75,8 +76,6 @@ func GetArtistTopTracksBySpotifyAPI(ctx *gin.Context, repo *rdb.Queries, artistN
 		}
 	}
 
-	fmt.Println("filteredTracks:", filteredTracks)
-
 	if len(filteredTracks) == 0 {
 		return nil, fmt.Errorf("no valid tracks found for artist")
 	}
@@ -84,6 +83,12 @@ func GetArtistTopTracksBySpotifyAPI(ctx *gin.Context, repo *rdb.Queries, artistN
 	if numTracks > len(filteredTracks) {
 		numTracks = len(filteredTracks)
 	}
+	// Shuffle indices
+	for i := 0; i < 3; i++ {
+		rand.Shuffle(len(filteredTracks), func(i, j int) { filteredTracks[i], filteredTracks[j] = filteredTracks[j], filteredTracks[i] })
+	}
+
+	// Select the first numTracks indices
 	selectedTracks := filteredTracks[:numTracks]
 	trackNames := make([]string, quizManager.TheNumberOfQuestions)
 	selectedMusic := 0

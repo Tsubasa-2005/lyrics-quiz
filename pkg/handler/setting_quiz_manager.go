@@ -18,8 +18,8 @@ func CheckUser(c *gin.Context, userID string, bot *linebot.Client, event *linebo
 		err = repo.CreateQuizManager(c, rdb.CreateQuizManagerParams{
 			UserID:               userID,
 			TheNumberOfQuestions: 0,
-			QuizCount:            0,
-			LyricsCount:          0,
+			QuizCount:            1,
+			LyricsCount:          1,
 			Status:               "not_started",
 			Type:                 "",
 		})

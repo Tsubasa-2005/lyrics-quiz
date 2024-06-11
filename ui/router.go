@@ -132,6 +132,18 @@ func SetupRouter() *gin.Engine {
 						} else if quizManager.Status == "artist" {
 							artist := message.Text
 							handler.InputArtistAndStartQuiz(ctx, quizManager, artist, bot, event)
+						} else if quizManager.Status == "started" {
+							if message.Text == "next" {
+								handler.NextQuiz(ctx, quizManager, bot, event)
+							} else if message.Text == "retry" {
+								handler.Retry(ctx, quizManager, bot, event)
+							} else if message.Text == "unknown_question" {
+								handler.UnknownQuestion(ctx, quizManager, bot, event)
+							} else if message.Text == "next_lyrics" {
+								handler.NextLyrics(ctx, quizManager, bot, event)
+							} else {
+								handler.CheckAnswer(ctx, quizManager, message.Text, bot, event)
+							}
 						}
 					}
 				}

@@ -8,12 +8,21 @@ import (
 	"github.com/line/line-bot-sdk-go/linebot"
 )
 
-func NextLyrics(c *gin.Context, quizManager rdb.QuizManager, bot *linebot.Client, event *linebot.Event) {
+func UnknownQuestion(c *gin.Context, quizManager rdb.QuizManager, bot *linebot.Client, event *linebot.Event) {
 	dbConn := c.MustGet("db").(rdb.DBTX)
 	repo := rdb.New(dbConn)
 
-	quizManager.LyricsCount++
-	err := repo.UpdateQuizManager(c, rdb.UpdateQuizManagerParams{
+	answer, err := repo.GetAnswer(c, rdb.GetAnswerParams{
+		QuizManagerID:  quizManager.UserID,
+		QuestionNumber: quizManager.QuizCount,
+	})
+	if err != nil {
+		message.Error(c, bot, event)
+		return
+	}
+	quizManager.LyricsCount = 1
+	quizManager.QuizCount++
+	err = repo.UpdateQuizManager(c, rdb.UpdateQuizManagerParams{
 		TheNumberOfQuestions: quizManager.TheNumberOfQuestions,
 		QuizCount:            quizManager.QuizCount,
 		LyricsCount:          quizManager.LyricsCount,
@@ -25,5 +34,5 @@ func NextLyrics(c *gin.Context, quizManager rdb.QuizManager, bot *linebot.Client
 		message.Error(c, bot, event)
 		return
 	}
-	message.ProblemStatement(c, bot, event, quizManager, repo)
+	message.Unknown(c, bot, event, answer.MusicName)
 }

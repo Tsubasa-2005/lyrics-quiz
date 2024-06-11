@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"lyrics-quiz/pkg/infra/rdb"
 	"lyrics-quiz/pkg/lyrics"
 	"lyrics-quiz/pkg/message"
@@ -103,9 +102,10 @@ func InputArtistAndStartQuiz(c *gin.Context, quizManager rdb.QuizManager, artist
 		message.Error(c, bot, event)
 	}
 
-	createdLyrics, err := lyrics.GetLyrics(c, repo, trackNames, quizManager)
+	_, err = lyrics.GetLyrics(c, repo, trackNames, quizManager)
 	if err != nil {
 		message.Error(c, bot, event)
 	}
-	fmt.Println("Lyrics Parts[0]:", createdLyrics[0])
+
+	message.ProblemStatement(c, bot, event, quizManager, repo)
 }

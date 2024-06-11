@@ -3,15 +3,18 @@ package lyrics
 import (
 	"fmt"
 	"log"
+	"lyrics-quiz/pkg/infra/rdb"
 	"net/http"
 	"net/url"
 	"strings"
+	"unicode"
 
 	"github.com/antchfx/htmlquery"
+	"github.com/gin-gonic/gin"
 )
 
-func GetLyrics(tracks []string) ([]string, error) {
-	for _, track := range tracks {
+func GetLyrics(c *gin.Context, repo *rdb.Queries, tracks []string, quizManager rdb.QuizManager) ([]string, error) {
+	for i, track := range tracks {
 		webPage := "https://www.uta-net.com/search/?Keyword=" + url.QueryEscape(track)
 		resp, err := http.Get(webPage)
 		if err != nil {
@@ -60,8 +63,7 @@ func GetLyrics(tracks []string) ([]string, error) {
 				if lyricsNode != nil {
 					lyricsHTML := htmlquery.OutputHTML(lyricsNode, true)
 					lyricsParts := strings.Split(lyricsHTML, "<br/><br/>")
-					lyrics := []string{}
-					for _, part := range lyricsParts {
+					for j, part := range lyricsParts {
 						// HTMLタグを除去してテキスト部分だけを取得
 						partNode, err := htmlquery.Parse(strings.NewReader(part))
 						if err != nil {
@@ -69,9 +71,19 @@ func GetLyrics(tracks []string) ([]string, error) {
 							continue
 						}
 						textPart := htmlquery.InnerText(partNode)
-						lyrics = append(lyrics, textPart)
+						if quizManager.Type == "hard" {
+							textPart = replaceNonHiraganaWithSquare(textPart)
+						}
+						err = repo.CreateLyrics(c, rdb.CreateLyricsParams{
+							QuizManagerID:  quizManager.UserID,
+							QuestionNumber: int64(i + 1),
+							Count:          int64(j + 1),
+							Lyrics:         textPart,
+						})
+						if err != nil {
+							return nil, err
+						}
 					}
-					return lyrics, nil
 				} else {
 					fmt.Println("Linked Page Lyrics Element not found")
 				}
@@ -81,4 +93,16 @@ func GetLyrics(tracks []string) ([]string, error) {
 		}
 	}
 	return nil, nil
+}
+
+func replaceNonHiraganaWithSquare(input string) string {
+	var result strings.Builder
+	for _, r := range input {
+		if unicode.In(r, unicode.Hiragana) {
+			result.WriteRune(r)
+		} else {
+			result.WriteRune('□')
+		}
+	}
+	return result.String()
 }
