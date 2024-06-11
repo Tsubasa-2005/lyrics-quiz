@@ -10,42 +10,22 @@ import (
 	"github.com/antchfx/htmlquery"
 )
 
-func GetLyrics() {
-	artistName := "スリーズブーケ"
-	numTracks := 5 // 取得したい曲名の数を指定
-	tracks, err := GetArtistTopTracksBySpotifyAPI(artistName, numTracks)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// 結果を出力
+func GetLyrics(tracks []string) ([]string, error) {
 	for _, track := range tracks {
-		// URLエンコードされた曲名を使用
 		webPage := "https://www.uta-net.com/search/?Keyword=" + url.QueryEscape(track)
 		resp, err := http.Get(webPage)
 		if err != nil {
-			log.Printf("failed to get html: %s", err)
-			continue
+			return nil, err
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != 200 {
-			log.Printf("failed to fetch data: %d %s", resp.StatusCode, resp.Status)
-			continue
+			return nil, fmt.Errorf("HTTP request failed with status code: %d", resp.StatusCode)
 		}
 
 		doc, err := htmlquery.Parse(resp.Body)
 		if err != nil {
-			log.Printf("failed to load html: %s", err)
-			continue
-		}
-
-		// タイトルを取得
-		title := htmlquery.FindOne(doc, "//title")
-		if title != nil {
-			fmt.Println("Title:", htmlquery.InnerText(title))
-		} else {
-			fmt.Println("Title not found")
+			return nil, err
 		}
 
 		// 指定のXPathの要素を取得し、そのリンクをクリック
@@ -91,13 +71,14 @@ func GetLyrics() {
 						textPart := htmlquery.InnerText(partNode)
 						lyrics = append(lyrics, textPart)
 					}
-					fmt.Println("Lyrics Parts[0]:", lyrics[0])
+					return lyrics, nil
 				} else {
 					fmt.Println("Linked Page Lyrics Element not found")
 				}
 			}
 		} else {
-			fmt.Println("Element not found")
+			return nil, fmt.Errorf("element not found")
 		}
 	}
+	return nil, nil
 }

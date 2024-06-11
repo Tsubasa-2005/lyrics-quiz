@@ -1,13 +1,14 @@
 package lyrics
 
 import (
-	"context"
 	"fmt"
-	"math/rand"
+	"lyrics-quiz/pkg/infra/rdb"
+	"lyrics-quiz/pkg/message"
 	"os"
 	"strings"
-	"time"
 
+	"github.com/gin-gonic/gin"
+	"github.com/line/line-bot-sdk-go/linebot"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
 
 	"golang.org/x/oauth2/clientcredentials"
@@ -16,13 +17,13 @@ import (
 	"github.com/zmb3/spotify/v2"
 )
 
-func GetArtistTopTracksBySpotifyAPI(artistName string, numTracks int) ([]string, error) {
+func GetArtistTopTracksBySpotifyAPI(ctx *gin.Context, repo *rdb.Queries, artistName string, quizManager rdb.QuizManager, bot *linebot.Client, event *linebot.Event) ([]string, error) {
+	numTracks := int(quizManager.TheNumberOfQuestions) * 4
 	err := godotenv.Load()
 	if err != nil {
 		return nil, fmt.Errorf("error loading .env file: %v", err)
 	}
 
-	ctx := context.Background()
 	config := &clientcredentials.Config{
 		ClientID:     os.Getenv("SPOTIFY_ID"),
 		ClientSecret: os.Getenv("SPOTIFY_SECRET"),
@@ -46,38 +47,80 @@ func GetArtistTopTracksBySpotifyAPI(artistName string, numTracks int) ([]string,
 	}
 	artistID := searchResult.Artists.Artists[0].ID
 
-	// アーティストのトップトラックを取得
-	topTracks, err := client.GetArtistsTopTracks(ctx, artistID, "JP")
+	albums, err := client.GetArtistAlbums(ctx, artistID, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("no artist album found")
+	}
+
+	albumIDs := make([]spotify.ID, 0)
+	for _, album := range albums.Albums {
+		albumIDs = append(albumIDs, album.ID)
+	}
+	fullTracks := make([]string, 0)
+	for _, albumID := range albumIDs {
+		albums, err := client.GetAlbumTracks(ctx, albumID)
+		if err != nil {
+			return nil, fmt.Errorf("no artist album found")
+		}
+		for _, track := range albums.Tracks {
+			fullTracks = append(fullTracks, track.Name)
+		}
 	}
 
 	// "- Off Vocal"と書かれている曲を除外
-	filteredTracks := make([]spotify.FullTrack, 0)
-	for _, track := range topTracks {
-		if !strings.Contains(track.Name, " - Off Vocal") {
+	filteredTracks := make([]string, 0)
+	for _, track := range fullTracks {
+		if !strings.Contains(track, " - Off Vocal") && !strings.Contains(track, " - 104期 Ver.") {
 			filteredTracks = append(filteredTracks, track)
 		}
 	}
+
+	fmt.Println("filteredTracks:", filteredTracks)
 
 	if len(filteredTracks) == 0 {
 		return nil, fmt.Errorf("no valid tracks found for artist")
 	}
 
-	// 曲をランダムにシャッフル
-	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(len(filteredTracks), func(i, j int) { filteredTracks[i], filteredTracks[j] = filteredTracks[j], filteredTracks[i] })
-
-	// 曲を指定された数だけ取得
 	if numTracks > len(filteredTracks) {
 		numTracks = len(filteredTracks)
 	}
 	selectedTracks := filteredTracks[:numTracks]
+	trackNames := make([]string, quizManager.TheNumberOfQuestions)
+	selectedMusic := 0
+	for len(selectedTracks) < int(quizManager.TheNumberOfQuestions)*4 {
+		quizManager.TheNumberOfQuestions--
+	}
+	for i := 0; i < int(quizManager.TheNumberOfQuestions); i++ {
+		choice1 := selectedTracks[i*4]
+		choice2 := selectedTracks[i*4+1]
+		choice3 := selectedTracks[i*4+2]
+		choice4 := selectedTracks[i*4+3]
 
-	// 曲名を表示
-	trackNames := make([]string, numTracks)
-	for i, track := range selectedTracks {
-		trackNames[i] = track.Name
+		err = repo.CreateChoices(ctx, rdb.CreateChoicesParams{
+			QuizManagerID:  quizManager.UserID,
+			QuestionNumber: int64(i + 1),
+			Choice1:        choice1,
+			Choice2:        choice2,
+			Choice3:        choice3,
+			Choice4:        choice4,
+		})
+		if err != nil {
+			message.ErrorCreatingProblems(ctx, bot, event)
+			break // エラーが発生したらループを終了
+		}
+
+		// 各グループからランダムに1曲ずつ選んでtrackNamesに追加
+		trackNames[selectedMusic] = selectedTracks[i*4]
+		err = repo.CreateAnswer(ctx, rdb.CreateAnswerParams{
+			QuizManagerID:  quizManager.UserID,
+			QuestionNumber: int64(i + 1),
+			MusicName:      selectedTracks[i*4],
+		})
+		if err != nil {
+			message.ErrorCreatingProblems(ctx, bot, event)
+			break // エラーが発生したらループを終了
+		}
+		selectedMusic++
 	}
 
 	return trackNames, nil

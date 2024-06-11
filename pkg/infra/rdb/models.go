@@ -17,6 +17,16 @@ type Artist struct {
 	Artist        string
 }
 
+type Choice struct {
+	ID             int64
+	QuizManagerID  string
+	QuestionNumber int64
+	Choice1        string
+	Choice2        string
+	Choice3        string
+	Choice4        string
+}
+
 type Lyric struct {
 	ID             int64
 	QuizManagerID  string

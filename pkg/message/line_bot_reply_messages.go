@@ -53,6 +53,13 @@ func Error(c *gin.Context, bot *linebot.Client, event *linebot.Event) {
 	}
 }
 
+func ErrorCreatingProblems(c *gin.Context, bot *linebot.Client, event *linebot.Event) {
+	reply := "問題作成中にエラーが起きました。もう一度アーティストの名前を入力してください。(何度も続く場合アーティストの名前を変更してみてください。)"
+	if _, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(reply)).Do(); err != nil {
+		c.Error(errors.Wrap(err))
+	}
+}
+
 func FinishedInitialize(c *gin.Context, bot *linebot.Client, event *linebot.Event) {
 	reply := "初期設定が完了しました。"
 	if _, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(reply)).Do(); err != nil {

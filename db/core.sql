@@ -28,6 +28,18 @@ CREATE TABLE answer (
     FOREIGN KEY (quiz_manager_id) REFERENCES quiz_manager(user_id)
 );
 
+-- Create table for Choices
+CREATE TABLE choices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    quiz_manager_id TEXT NOT NULL,
+    question_number INTEGER NOT NULL,
+    choice1 TEXT NOT NULL,
+    choice2 TEXT NOT NULL,
+    choice3 TEXT NOT NULL,
+    choice4 TEXT NOT NULL,
+    FOREIGN KEY (quiz_manager_id) REFERENCES quiz_manager(user_id)
+);
+
 -- Create table for Artist
 CREATE TABLE artist (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

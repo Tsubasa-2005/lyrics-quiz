@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"fmt"
 	"lyrics-quiz/pkg/infra/rdb"
+	"lyrics-quiz/pkg/lyrics"
 	"lyrics-quiz/pkg/message"
 
 	"github.com/gin-gonic/gin"
@@ -95,4 +97,15 @@ func InputArtistAndStartQuiz(c *gin.Context, quizManager rdb.QuizManager, artist
 	if err != nil {
 		message.Error(c, bot, event)
 	}
+
+	trackNames, err := lyrics.GetArtistTopTracksBySpotifyAPI(c, repo, artist, quizManager, bot, event)
+	if err != nil {
+		message.Error(c, bot, event)
+	}
+
+	createdLyrics, err := lyrics.GetLyrics(c, repo, trackNames, quizManager)
+	if err != nil {
+		message.Error(c, bot, event)
+	}
+	fmt.Println("Lyrics Parts[0]:", createdLyrics[0])
 }
