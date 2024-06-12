@@ -11,4 +11,5 @@
 
 解答形式は選択式となっており、複数の選択肢から正しい曲名を選びます。
 
-
+## LINE Bot QRコード
+![line_bot](https://github.com/Tsubasa-2005/lyrics-quiz/assets/130951792/8aa74caa-87c3-48c5-ab6e-a7d0e8e6f23b)
