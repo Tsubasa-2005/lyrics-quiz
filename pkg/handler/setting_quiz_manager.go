@@ -27,14 +27,7 @@ func CheckUser(c *gin.Context, userID string, bot *linebot.Client, event *linebo
 			message.Error(c, bot, event)
 			return rdb.QuizManager{}
 		}
-		err = repo.CreateArtist(c, rdb.CreateArtistParams{
-			QuizManagerID: userID,
-			Artist:        "",
-		})
-		if err != nil {
-			message.Error(c, bot, event)
-			return rdb.QuizManager{}
-		}
+
 		message.FinishedInitialize(c, bot, event)
 	}
 

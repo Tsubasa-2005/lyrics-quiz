@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"os"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/cobra"
@@ -48,9 +47,6 @@ func migrateCmd() *cobra.Command {
 		Use:   "migrate",
 		Short: "Migrate the database",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// 環境変数の設定
-			os.Setenv("DB_PATH", "./example.db")
-
 			// データベースに接続または新規作成
 			ctx := context.Background()
 			db := ConnectDB(ctx)

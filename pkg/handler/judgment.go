@@ -22,13 +22,13 @@ func CheckAnswer(c *gin.Context, quizManager rdb.QuizManager, message string, bo
 		return
 	}
 	if answer.MusicName == message {
+		quizManager.LyricsCount = 1
+		quizManager.QuizCount++
 		if quizManager.QuizCount > quizManager.TheNumberOfQuestions {
 			infra.Initialize(c, quizManager.UserID, bot, event)
 			reply.EndQuiz(c, bot, event)
 			return
 		} else {
-			quizManager.LyricsCount = 1
-			quizManager.QuizCount++
 			err = repo.UpdateQuizManager(c, rdb.UpdateQuizManagerParams{
 				TheNumberOfQuestions: quizManager.TheNumberOfQuestions,
 				QuizCount:            quizManager.QuizCount,
