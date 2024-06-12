@@ -2,6 +2,6 @@
 local-server:
 	go run ./cmd server local
 
-.PHONE: migrate and initialize
+.PHONE: migrate
 migrate:
 	go run ./cmd migrate

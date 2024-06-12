@@ -22,36 +22,6 @@ func DBContext() gin.HandlerFunc {
 	}
 }
 
-func MessageInterceptor() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		events, err := bot.ParseRequest(c.Request)
-		if err != nil {
-			if errors.Is(err, linebot.ErrInvalidSignature) {
-				c.AbortWithStatus(http.StatusBadRequest)
-			} else {
-				c.AbortWithStatus(http.StatusInternalServerError)
-			}
-			return
-		}
-
-		for _, event := range events {
-			if event.Type == linebot.EventTypeMessage {
-				switch message := event.Message.(type) {
-				case *linebot.TextMessage:
-					// 特定のメッセージを受け取った場合、処理を中断して終了メッセージを返す
-					if message.Text == "e" || message.Text == "E" {
-						infra.Initialize(c, event.Source.UserID, bot, event)
-						replyMessage.FinishedQuiz(c, bot, event)
-						c.Abort()
-						return
-					}
-				}
-			}
-		}
-		c.Next()
-	}
-}
-
 func SetupRouter() *gin.Engine {
 	var (
 		channelSecret      = os.Getenv("CHANNEL_SECRET")
